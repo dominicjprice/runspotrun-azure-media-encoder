@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ServiceDefinition name="runspotrun_azure_media_encoder" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2014-06.2.4">
+  <WorkerRole name="EncoderRole" vmsize="Small">
+    <ConfigurationSettings>
+      <Setting name="task_queue" />
+      <Setting name="raw_container" />
+      <Setting name="encoded_container" />
+      <Setting name="blob_account_name" />
+      <Setting name="blob_account_key" />
+      <Setting name="server_username" />
+      <Setting name="server_api_key" />
+      <Setting name="media_account_name" />
+      <Setting name="media_account_key" />
+    </ConfigurationSettings>
+    <Imports>
+      <Import moduleName="RemoteAccess" />
+      <Import moduleName="RemoteForwarder" />
+    </Imports>
+  </WorkerRole>
+</ServiceDefinition>

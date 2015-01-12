@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{CC5FD16D-436D-48AD-A40C-5A424C6E3E79}") = "runspotrun-azure-media-encoder", "runspotrun-azure-media-encoder\runspotrun-azure-media-encoder.ccproj", "{8F20BF30-770D-4152-98C0-6CB7A88D8B9F}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EncoderRole", "EncoderRole\EncoderRole.fsproj", "{1806B23B-9458-4DF9-8EB5-8AD7D0D25EEE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8F20BF30-770D-4152-98C0-6CB7A88D8B9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F20BF30-770D-4152-98C0-6CB7A88D8B9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F20BF30-770D-4152-98C0-6CB7A88D8B9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F20BF30-770D-4152-98C0-6CB7A88D8B9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1806B23B-9458-4DF9-8EB5-8AD7D0D25EEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1806B23B-9458-4DF9-8EB5-8AD7D0D25EEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1806B23B-9458-4DF9-8EB5-8AD7D0D25EEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1806B23B-9458-4DF9-8EB5-8AD7D0D25EEE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		EnterpriseLibraryConfigurationToolBinariesPath = packages\TransientFaultHandling.Core.5.1.1209.1\lib\NET4
+	EndGlobalSection
+EndGlobal
