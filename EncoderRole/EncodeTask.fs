@@ -19,7 +19,8 @@ open UK.AC.Horizon.RunSpotRun
 let _name (ext : string) (s : string) =    
     sprintf "%s-%s" (s.Replace(".", "_")) ext
 let input_name = _name "input"
-let output_name = _name "output"
+let output_name_video = _name "output-video"
+let output_name_thumb = _name "output-thumb"
 let job_name = _name "encoding-job"
 let task_name = _name "encoding-task"
 
@@ -97,27 +98,43 @@ let run (id : string) (config : Config.t) =
         try 
             let job = context.Jobs.Create(job_name video_name)
             let processor = context.MediaProcessors.GetLatestMediaProcessorByName(MediaProcessorNames.AzureMediaEncoder)
-            let task = job.Tasks.AddNew(task_name video_name, processor, 
-                        MediaEncoderTaskPresetStrings.H264Broadband720p,
-                        TaskOptions.None)
+            let configuration = MediaEncoderTaskPresetStrings.H264Broadband720p
+            let task = job.Tasks.AddNew(task_name video_name, processor, configuration, TaskOptions.None)
             task.InputAssets.Add(input_asset)
-            let output_asset = task.OutputAssets.AddNew(output_name video_name, AssetCreationOptions.None)
+            let name = output_name_video video_name
+            let output_asset = task.OutputAssets.AddNew(name, AssetCreationOptions.None)
+            job.StateChanged.Add(fun t -> sprintf "%s - Current encoding state = %A" id t.CurrentState |> Log.information)
+            job.Submit()
+            job.GetExecutionProgressTask(CancellationToken.None).Wait()
+            job.Delete()
+            Result.Ok(name)
+        with _ as e ->
+            Result.Error(new EncodeException("An unexpected error during encoding", e))
+
+    let generate_thumbnail (video_name : string) (input_asset : IAsset) =
+        try 
+            let job = context.Jobs.Create(job_name video_name)
+            let processor = context.MediaProcessors.GetLatestMediaProcessorByName(MediaProcessorNames.AzureMediaEncoder)
+            let configuration = "<Thumbnail Size=\"225,169\" Type=\"Jpeg\" JpegQuality=\"90\" Filename=\"{OriginalFilename}.jpg\"><Time Value=\"10%\" /></Thumbnail>"
+            let task = job.Tasks.AddNew(task_name video_name, processor, configuration, TaskOptions.None)
+            task.InputAssets.Add(input_asset)
+            let name = output_name_thumb video_name
+            let output_asset = task.OutputAssets.AddNew(name, AssetCreationOptions.None)
             job.StateChanged.Add(fun t -> sprintf "%s - Current encoding state = %A" id t.CurrentState |> Log.information)
             job.Submit()
             job.GetExecutionProgressTask(CancellationToken.None).Wait()
             input_asset.Delete()
             job.Delete()
-            Result.Ok()
+            Result.Ok(name)
         with _ as e ->
-            Result.Error(new EncodeException("An unexpected error during encoding", e))
+            Result.Error(new EncodeException("An unexpected error during thumbnail generation", e))
 
-
-    let extract_video (video_name : string) =
+    let extract_video (video_name : string) (video_asset_name : string) =
         try
             let asset = context.Assets 
                         |> Seq.choose 
                             (fun a -> 
-                                match a.Name.Equals(output_name video_name) with 
+                                match a.Name.Equals(video_asset_name) with 
                                 | true -> Some(a) 
                                 | _ -> None) |> Seq.head
             let choosefile (f : IAssetFile) =
@@ -143,6 +160,37 @@ let run (id : string) (config : Config.t) =
         with _ as e ->
             Result.Error(new EncodeException("An unexpected error extracting the encoded video", e))
 
+    let extract_thumb (video_name : string) (thumb_asset_name : string) =
+        try
+            let asset = context.Assets 
+                        |> Seq.choose 
+                            (fun a -> 
+                                match a.Name.Equals(thumb_asset_name) with 
+                                | true -> Some(a) 
+                                | _ -> None) |> Seq.head
+            let choosefile (f : IAssetFile) =
+                match f.Name.EndsWith("jpg", StringComparison.OrdinalIgnoreCase) with
+                | true -> Some(f)
+                | false -> None
+            let out = asset.AssetFiles |> Seq.choose choosefile |> Seq.head
+            let policy = context.AccessPolicies.Create("readPolicy", TimeSpan.FromDays(1.0), AccessPermissions.Read)
+            let locator = context.Locators.CreateLocator(LocatorType.Sas, asset, policy)
+            let fContainer = blob_client.GetContainerReference((new Uri(locator.Path)).Segments.[1])
+            let from_blob = fContainer.GetBlockBlobReference(out.Name)
+            let tContainer = blob_client.GetContainerReference("encoded")
+            let to_blob = tContainer.GetBlockBlobReference(out.Name)
+            to_blob.DeleteIfExists() |> ignore
+            match copy_blob from_blob to_blob with
+            | Result.Ok _ -> 
+                locator.Delete()
+                policy.Delete()
+                asset.Delete()
+                Result.Ok(to_blob)
+            | Result.Error e ->
+                Result.Error(e)
+        with _ as e ->
+            Result.Error(new EncodeException("An unexpected error extracting the thumbnail", e))
+
     let rec loop () = 
         sprintf "%s - Checking for videos to encode" id |> Log.information 
         match queue.GetMessage(new Nullable<TimeSpan>(message_timeout)) with
@@ -152,13 +200,15 @@ let run (id : string) (config : Config.t) =
         | _ as message -> 
             let video_name = message.AsString
             sprintf "%s - Processing video with name '%s'" id video_name |> Log.information
-            let task = new Task<Result.t<CloudBlockBlob, EncodeException>>
+            let task = new Task<Result.t<CloudBlockBlob * CloudBlockBlob, EncodeException>>
                         (fun () -> 
                         Result.result {
-                            let! a = create_asset video_name
-                            let! b = encode_video video_name a
-                            let! c = extract_video video_name
-                            return c
+                            let! input_asset = create_asset video_name
+                            let! video_asset_name = encode_video video_name input_asset
+                            let! thumb_asset_name = generate_thumbnail video_name input_asset
+                            let! video_blob = extract_video video_name video_asset_name
+                            let! thumb_blob = extract_thumb video_name thumb_asset_name
+                            return (video_blob, thumb_blob)
                         })
             task.Start()
             while not task.IsCompleted do
@@ -166,8 +216,8 @@ let run (id : string) (config : Config.t) =
                 task.Wait(task_timeout) |> ignore
             queue.DeleteMessage(message)
             match task.Result with
-            | Result.Ok blob ->
-                sprintf "%s - Encoded video with name '%s'" id blob.Name |> Log.information
+            | Result.Ok (video_blob, thumb_blob) ->
+                sprintf "%s - Encoded video with name '%s'" id video_blob.Name |> Log.information
                 try
                     let rclient = new RestClient("https://www.runspotrun.co.uk/api/v1")
                     let req = new RestRequest("video/guid/{id}", Method.PUT)
@@ -177,7 +227,11 @@ let run (id : string) (config : Config.t) =
                             .AddQueryParameter("api_key", config.server_api_key)
                             .AddUrlSegment("id", vid) |> ignore
                     req.RequestFormat <- RestSharp.DataFormat.Json
-                    req.AddBody(Map.ofList [("guid", vid); ("url", blob.Uri.ToString())]) |> ignore
+                    req.AddBody(Map.ofList 
+                        [("guid", vid);
+                        ("url", video_blob.Uri.ToString());
+                        ("thumbnail", thumb_blob.Uri.ToString());
+                        ("online", "1");]) |> ignore
                     rclient.Execute(req) |> ignore
                 with _ as e ->
                     sprintf "%s - An error occurred updating the server: %s (%A)" id e.Message e.StackTrace |> Log.error

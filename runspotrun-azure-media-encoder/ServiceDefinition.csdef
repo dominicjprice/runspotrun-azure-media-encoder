@@ -13,8 +13,6 @@
       <Setting name="media_account_key" />
     </ConfigurationSettings>
     <Imports>
-      <Import moduleName="RemoteAccess" />
-      <Import moduleName="RemoteForwarder" />
     </Imports>
   </WorkerRole>
 </ServiceDefinition>
