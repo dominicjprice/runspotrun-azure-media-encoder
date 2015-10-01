@@ -68,6 +68,9 @@
       <HintPath>..\packages\Microsoft.WindowsAzure.ConfigurationManager.2.0.3\lib\net40\Microsoft.WindowsAzure.Configuration.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.WindowsAzure.Diagnostics, Version=2.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Microsoft.WindowsAzure.MediaServices.Client">
       <HintPath>..\packages\windowsazure.mediaservices.3.1.0.0\lib\net45\Microsoft.WindowsAzure.MediaServices.Client.dll</HintPath>
       <Private>True</Private>
@@ -76,9 +79,8 @@
       <HintPath>..\packages\windowsazure.mediaservices.extensions.3.1.0.0\lib\net45\Microsoft.WindowsAzure.MediaServices.Client.Extensions.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.WindowsAzure.ServiceRuntime">
-      <HintPath>..\..\..\..\..\..\..\..\Windows\Microsoft.NET\assembly\GAC_MSIL\Microsoft.WindowsAzure.ServiceRuntime\v4.0_2.5.0.0__31bf3856ad364e35\Microsoft.WindowsAzure.ServiceRuntime.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Microsoft.WindowsAzure.ServiceRuntime, Version=2.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.WindowsAzure.Storage">
       <HintPath>..\packages\WindowsAzure.Storage.4.3.0\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
@@ -97,9 +99,6 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="Microsoft.WindowsAzure.Diagnostics, Version=2.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
-      <Private>true</Private>
-    </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Spatial">
       <HintPath>..\packages\System.Spatial.5.6.3\lib\net40\System.Spatial.dll</HintPath>
